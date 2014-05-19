@@ -6,6 +6,17 @@
     <title>remote storage example</title>
     <script type="text/javascript" src="./vendor/remotestorage.js"></script>
       <style>
+          body {
+              margin: 0;
+              padding: 0;
+          }
+          h1 {
+              margin: 0;
+              padding: 0;
+          }
+          body>h1 {
+              color: #5e484b;
+          }
           #images-listing {
               display: none;
           }
@@ -16,21 +27,35 @@
               position: fixed;
               right: 10px;
               top: 60px;
+              cursor: pointer;
+              margin-top: -5px;
+              opacity: 0.8;
+          }
+          #remotestorage-disconnect:hover {
+              opacity: 1;
+          }
+          .header {
+              margin: 0;
+              height: 80px;
+              background-color: #5e484b;
+              color: white;
+          }
+          .document>h1 {
+              font-size: 100%;
+          }
+          .document>div {
+              margin: 5px 0;
+              background-color: #ededed;
           }
       </style>
   </head>
   <body>
 
-    <h1>Storage example</h1>
-
-<!--
-    <p>See here for more information: <a href="http://remotestorage.io/integrate/add-to-app.html" target="_blank">http://remotestorage.io/integrate/add-to-app.html</a></p>
-    <p>Documentation for RemoteStorage API is here: <a href="http://remotestorage.io/doc/code/files/baseclient-js.html" target="_blank">http://remotestorage.io/doc/code/files/baseclient-js.html</a></p>
-    <p>Auch cool:git https://github.com/remotestorage/myfavoritedrinks</p>
--->
-
-    <div id="remotestorage-connect" onclick="logout()"></div>
-    <button id="remotestorage-disconnect" onclick="logout()">Logout</button>
+    <div class="header">
+        <h1>Storage example</h1>
+        <div id="remotestorage-connect" onclick="logout()"></div>
+        <div id="remotestorage-disconnect" onclick="logout()">Logout</div>
+    </div>
 
     <h1>New documents</h1>
     <span>Upload:&nbsp;</span><input type="file" id="file-input" onchange="uploadImage()" />
@@ -42,11 +67,17 @@
     <div id="images-listing"></div>
     <hr/>
 
+    <h1>Documents</h1>
+
+<!--
     <h1>List of all stored files</h1>
     <div id="listing"></div>
     <hr/>
+-->
 
     <script type="text/javascript">
+
+        var EMPTY_DOCUMENT_CONTENT = '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>';
 
         // define module DOCUMENTS
 
@@ -124,22 +155,18 @@
             var allFileNames = [];
             for (var name in listing) {
                 allFileNames.push(name);
-                // create editable content for html files
+            }
+            allFileNames.sort();
+//            var el = document.getElementById('listing');
+//            el.innerHTML = allFileNames.join(', ');
+            // create editable content for html files
+            for (var i in allFileNames) {
+                var name = allFileNames[i];
                 var nameSplit = name.split('.');
-                var editId = name.replace(/\./g,'-');
                 if (nameSplit[1] === 'html') {
-                    remoteStorage.documents.getDocument(name).then(function(file) {
-                        var data = file.data || '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>';
-                        document.body.innerHTML += '<div id="'+editId+'" data-file="'+name+'" contenteditable="true">'+data+'</div><hr>';
-                        var editElement = document.getElementById(editId);
-                        editElement.addEventListener("blur", function() {
-                            remoteStorage.documents.storeDocument(name, editElement.innerHTML);
-                        }, false);
-                    });
+                    renderDocumentIntoArea(name);
                 }
             }
-            var el = document.getElementById('listing');
-            el.innerHTML = allFileNames.join(', ');
         });
 
         remoteStorage.images.fetchImages('').then(function(listing) {
@@ -158,13 +185,27 @@
             el.innerHTML = ids.join(', ');
         });
 
+        function renderDocumentIntoArea (name) {
+            remoteStorage.documents.getDocument(name).then(function(file) {
+                var editId = name.replace(/\./g,'-');
+                var data = file.data || EMPTY_DOCUMENT_CONTENT;
+                document.body.innerHTML += '<div class="document"><h1>'+name+'</h1><div id="'+editId+'" data-file="'+name+'" contenteditable="true">'+data+'</div></div>';
+                var editElement = document.getElementById(editId);
+                editElement.addEventListener("blur", function() {
+                    remoteStorage.documents.storeDocument(name, editElement.innerHTML).then(function(){
+                        console.log("file " + name + " stored");
+                    });
+                }, false);
+            });
+        }
+
         function uploadImage () {
             var input = document.getElementById('file-input');
             var file = input.files[0];
             var fileReader = new FileReader();
             fileReader.onload = function() {
                 remoteStorage.images.addImage(file.name, fileReader.result).then(function(){
-                    console.log("file stored");
+                    console.log("image stored");
                 });
             };
             fileReader.readAsDataURL(file);
@@ -172,7 +213,7 @@
 
         function newDocument () {
             var name = document.getElementById('new-document').value;
-            remoteStorage.documents.storeDocument(name+'.html', '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>').then(function(){
+            remoteStorage.documents.storeDocument(name+'.html', EMPTY_DOCUMENT_CONTENT).then(function(){
                 window.location.reload();
             });
         }
