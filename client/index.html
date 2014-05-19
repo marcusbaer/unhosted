@@ -1,0 +1,188 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>remote storage example</title>
+    <script type="text/javascript" src="./vendor/remotestorage.js"></script>
+      <style>
+          #images-listing {
+              display: none;
+          }
+          #images-show img {
+              margin-right: 15px;
+          }
+          #remotestorage-disconnect {
+              position: fixed;
+              right: 10px;
+              top: 60px;
+          }
+      </style>
+  </head>
+  <body>
+
+    <h1>Storage example</h1>
+
+<!--
+    <p>See here for more information: <a href="http://remotestorage.io/integrate/add-to-app.html" target="_blank">http://remotestorage.io/integrate/add-to-app.html</a></p>
+    <p>Documentation for RemoteStorage API is here: <a href="http://remotestorage.io/doc/code/files/baseclient-js.html" target="_blank">http://remotestorage.io/doc/code/files/baseclient-js.html</a></p>
+    <p>Auch cool:git https://github.com/remotestorage/myfavoritedrinks</p>
+-->
+
+    <div id="remotestorage-connect" onclick="logout()"></div>
+    <button id="remotestorage-disconnect" onclick="logout()">Logout</button>
+
+    <h1>New documents</h1>
+    <span>Upload:&nbsp;</span><input type="file" id="file-input" onchange="uploadImage()" />
+    <span>Text file:&nbsp;</span><input type="text" id="new-document" placeholder="name your new text file" /><input type="button" value="Create" onclick="newDocument()" />
+    <hr/>
+
+    <h1>List of all stored images</h1>
+    <div id="images-show"></div>
+    <div id="images-listing"></div>
+    <hr/>
+
+    <h1>List of all stored files</h1>
+    <div id="listing"></div>
+    <hr/>
+
+    <script type="text/javascript">
+
+        // define module DOCUMENTS
+
+        RemoteStorage.defineModule('documents', function(privateClient, publicClient) {
+
+            return {
+                exports: {
+                    getListing: function(path) {
+                        return privateClient.getListing(path);
+                    },
+                    storeFile: function (fileType, fileName, content) {
+                        return privateClient.storeFile(fileType, fileName, content);
+                    },
+                    getFile: function (fileName) {
+                        return privateClient.getFile(fileName);
+                    },
+                    storeDocument: function (fileName, content) {
+                        return privateClient.storeFile('text/html', fileName, content);
+                    },
+                    getDocument: function (fileName) {
+                        return privateClient.getFile(fileName);
+                    }
+                }
+            };
+        });
+
+        // define module IMAGE
+
+        RemoteStorage.defineModule('images', function(privateClient, publicClient) {
+            privateClient.declareType('image', {
+                "description": "an image object",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "id"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "string"
+                    }
+                }
+            });
+            return {
+                exports: {
+                    addImage: function (title, data) {
+                        var id = new Date().getTime().toString();
+                        return privateClient.storeObject('image', id, {
+                            id: id,
+                            title: title,
+                            timestamp: id,
+                            data: data
+                        });
+                    },
+                    fetchImages: function () {
+                        return privateClient.getAll('');
+                    }
+                }
+            };
+        });
+
+        remoteStorage.access.claim('images', 'rw');
+        remoteStorage.access.claim('documents', 'rw');
+
+        // include the remoteStorage widget, which allows the user to connect to their storage server:
+        remoteStorage.displayWidget();
+
+        // SHOW ALL STORED FILES AND IMAGE OBJECTS
+        remoteStorage.documents.getListing('').then(function(listing) {
+            var allFileNames = [];
+            for (var name in listing) {
+                allFileNames.push(name);
+                // create editable content for html files
+                var nameSplit = name.split('.');
+                var editId = name.replace(/\./g,'-');
+                if (nameSplit[1] === 'html') {
+                    remoteStorage.documents.getDocument(name).then(function(file) {
+                        var data = file.data || '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>';
+                        document.body.innerHTML += '<div id="'+editId+'" data-file="'+name+'" contenteditable="true">'+data+'</div><hr>';
+                        var editElement = document.getElementById(editId);
+                        editElement.addEventListener("blur", function() {
+                            remoteStorage.documents.storeDocument(name, editElement.innerHTML);
+                        }, false);
+                    });
+                }
+            }
+            var el = document.getElementById('listing');
+            el.innerHTML = allFileNames.join(', ');
+        });
+
+        remoteStorage.images.fetchImages('').then(function(listing) {
+            var ids = [];
+            var imgElement = document.getElementById('images-show');
+            for (var id in listing) {
+                ids.push(id);
+                var img = document.createElement('img');
+                img.setAttribute('height', '150');
+                var d = new Date(parseInt(listing[id].timestamp));
+                img.setAttribute('title', "'"+listing[id].title + "' from " + d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear());
+                img.src = listing[id].data;
+                imgElement.appendChild(img);
+            }
+            var el = document.getElementById('images-listing');
+            el.innerHTML = ids.join(', ');
+        });
+
+        function uploadImage () {
+            var input = document.getElementById('file-input');
+            var file = input.files[0];
+            var fileReader = new FileReader();
+            fileReader.onload = function() {
+                remoteStorage.images.addImage(file.name, fileReader.result).then(function(){
+                    console.log("file stored");
+                });
+            };
+            fileReader.readAsDataURL(file);
+        }
+
+        function newDocument () {
+            var name = document.getElementById('new-document').value;
+            remoteStorage.documents.storeDocument(name+'.html', '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>').then(function(){
+                window.location.reload();
+            });
+        }
+
+        function logout () {
+            remoteStorage.disconnect();
+            window.location.reload();
+        }
+
+    </script>
+
+  </body>
+</html>

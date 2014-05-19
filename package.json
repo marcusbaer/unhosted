@@ -1,0 +1,16 @@
+{
+  "name": "unhosted",
+  "version": "0.0.1",
+  "description": "remote storage example to have your own data",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "./server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcus Baer <info@baer-media.de>",
+  "license": "MIT"
+}
