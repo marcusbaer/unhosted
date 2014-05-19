@@ -4,7 +4,7 @@
   "description": "remote storage example to have your own data",
   "main": "server.js",
   "dependencies": {
-    "express": "^4.2.0"
+    "express": "~4.2.0"
   },
   "devDependencies": {},
   "scripts": {
