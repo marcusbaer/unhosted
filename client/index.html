@@ -51,6 +51,9 @@
               margin: 5px 0;
               background-color: #ededed;
           }
+          .hidden {
+              display: none;
+          }
       </style>
   </head>
   <body>
@@ -84,6 +87,25 @@
     <script type="text/javascript">
 
         var EMPTY_DOCUMENT_CONTENT = '<h1>Feel free to edit!</h1><p>You can edit me by click inside. Save just on leaving that area..</p>';
+
+        remoteStorage.enableLog();
+
+//        remoteStorage.setApiKeys('googledrive', {
+//            client_id: '76638044554.apps.googleusercontent.com'
+//        });
+
+//        remoteStorage.addEventListener('ready', function() { console.log('ready'); });
+//        remoteStorage.addEventListener('not-connected', function() {
+//            console.log('not-connected');
+//            document.getElementById('remotestorage-disconnect').setAttribute('class','hidden');
+//            document.getElementById('remotestorage-connect').setAttribute('class','');
+//        });
+//        remoteStorage.addEventListener('connected', function() {
+//            console.log('connected');
+//            document.getElementById('remotestorage-connect').setAttribute('class','hidden');
+//            document.getElementById('remotestorage-disconnect').setAttribute('class','');
+//        });
+//        remoteStorage.addEventListener('disconnected', function() { console.log('disconnected'); });
 
         // define module DOCUMENTS
 
@@ -150,6 +172,7 @@
             };
         });
 
+//        remoteStorage.access.claim('root', 'rw');
         remoteStorage.access.claim('images', 'rw');
         remoteStorage.access.claim('documents', 'rw');
 
